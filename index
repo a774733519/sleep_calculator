@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sleep Cycle Calculator | 睡眠周期计算器</title>
+    
+    <!-- CDN引入 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/framer-motion@10/dist/framer-motion.js"></script>
+    
+    <style>
+        /* CSS变量定义 - 4个背景主题 */
+        :root {
+            --bg-frosted: linear-gradient(135deg, #ffffff 0%, #f8fafc 25%, #f1f5f9 50%, #e2e8f0 75%, #cbd5e1 100%);
+            --bg-green: linear-gradient(135deg, #064e3b 0%, #065f46 20%, #047857 40%, #059669 60%, #10b981 80%, #34d399 100%);
+            --bg-pink: linear-gradient(135deg, #be185d 0%, #db2777 20%, #ec4899 40%, #f472b6 60%, #f9a8d4 80%, #fce7f3 100%);
+            --bg-twilight: linear-gradient(135deg, #312e81 0%, #3730a3 20%, #4338ca 40%, #4f46e5 60%, #6366f1 80%, #8b5cf6 100%);
+            
+            /* 默认主题：磨砂玻璃白 */
+            --bg-current: var(--bg-frosted);
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --glass-bg: rgba(255, 255, 255, 0.25);
+            --glass-border: rgba(255, 255, 255, 0.18);
+        }
+        
+        /* 背景主题类 */
+        .theme-frosted {
+            --bg-current: var(--bg-frosted);
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --glass-bg: rgba(255, 255, 255, 0.25);
+            --glass-border: rgba(255, 255, 255, 0.18);
+        }
+        
+        .theme-green {
+            --bg-current: var(--bg-green);
+            --text-primary: #f0fdf4;
+            --text-secondary: #bbf7d0;
+            --glass-bg: rgba(255, 255, 255, 0.15);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+        
+        .theme-pink {
+            --bg-current: var(--bg-pink);
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --glass-bg: rgba(255, 255, 255, 0.2);
+            --glass-border: rgba(255, 255, 255, 0.15);
+        }
+        
+        .theme-twilight {
+            --bg-current: var(--bg-twilight);
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.05);
+        }
+        
+        /* 全局样式 */
+        body {
+            background: var(--bg-current);
+            color: var(--text-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            transition: all 0.5s ease;
+            overflow: hidden; /* 防止页面滚动 */
+            height: 100vh;
+        }
+        
+        /* 玻璃拟态效果 */
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* 渐变文字效果 */
+        .gradient-text {
+            background: linear-gradient(45deg, #e31937, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #feca57);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientShift 3s ease-in-out infinite;
+        }
+        
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        /* 按钮样式 */
+        .btn-primary {
+            background: linear-gradient(135deg, #e31937 0%, #ff4757 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(227, 25, 55, 0.3);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 8px 25px rgba(227, 25, 55, 0.4);
+        }
+        
+        /* 修复后的滚动时间选择器样式 */
+        .time-picker {
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            border: 2px solid var(--glass-border);
+            border-radius: 1rem;
+            padding: 0.5rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0.5rem;
+            height: 160px; /* 增加高度以容纳更多选项 */
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* 选择框指示器 */
+        .time-picker::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0.5rem;
+            right: 0.5rem;
+            height: 40px;
+            transform: translateY(-50%);
+            background: rgba(227, 25, 55, 0.1);
+            border: 2px solid #e31937;
+            border-radius: 0.5rem;
+            z-index: 1;
+            pointer-events: none;
+        }
+        
+        .picker-column {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            position: relative;
+            z-index: 2;
+            /* 添加padding确保选中项能居中 */
+            padding: 60px 0; /* 上下各60px，确保选中项在中央 */
+        }
+        
+        .picker-column::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .picker-item {
+            height: 40px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.125rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 0.5rem;
+            color: var(--text-secondary);
+            user-select: none;
+            flex-shrink: 0; /* 防止项目被压缩 */
+        }
+        
+        .picker-item:hover {
+            background: rgba(227, 25, 55, 0.1);
+            color: #e31937;
+        }
+        
+        .picker-item.selected {
+            background: #e31937;
+            color: white;
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(227, 25, 55, 0.3);
+        }
+        
+        /* 结果卡片样式 */
+        .result-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border);
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            transition: all 0.3s ease;
+            border-left: 4px solid #e31937;
+        }
+        
+        .result-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        /* 背景选择器样式 */
+        .bg-selector {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            z-index: 1000;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 1rem;
+            padding: 1rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+        
+        .bg-option {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+            position: relative;
+        }
+        
+        .bg-option:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .bg-option.active {
+            border-color: #e31937;
+            box-shadow: 0 0 0 2px rgba(227, 25, 55, 0.3);
+        }
+        
+        .bg-option[data-theme="frosted"] {
+            background: linear-gradient(135deg, #ffffff, #e2e8f0);
+        }
+        
+        .bg-option[data-theme="green"] {
+            background: linear-gradient(135deg, #064e3b, #34d399);
+        }
+        
+        .bg-option[data-theme="pink"] {
+            background: linear-gradient(135deg, #be185d, #fce7f3);
+        }
+        
+        .bg-option[data-theme="twilight"] {
+            background: linear-gradient(135deg, #312e81, #8b5cf6);
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 1199px) {
+            .content-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .chart-section {
+                grid-column: 1 / -1;
+            }
+        }
+        
+        @media (max-width: 767px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+                padding: 0.75rem;
+            }
+            
+            .bg-selector {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin: 0 auto 1rem;
+                width: fit-content;
+            }
+            
+            .main-title {
+                font-size: 2rem !important;
+            }
+            
+            .navbar {
+                flex-direction: column;
+                height: auto;
+                padding: 0.75rem;
+            }
+            
+            .time-picker {
+                height: 140px;
+            }
+            
+            .picker-column {
+                padding: 50px 0;
+            }
+            
+            .picker-item {
+                height: 35px;
+                font-size: 1rem;
+            }
+        }
+        
+        /* 广告位样式 */
+        .ad-slot {
+            background: var(--glass-bg);
+            border: 2px dashed var(--glass-border);
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .ad-slot:hover {
+            border-color: #e31937;
+            color: #e31937;
+        }
+        
+        /* 图表容器样式 */
+        .chart-container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border);
+            border-radius: 1rem;
+            padding: 1rem;
+            height: 280px;
+        }
+        
+        /* 快速操作按钮 */
+        .quick-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: var(--text-primary);
+            font-weight: 500;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .quick-btn:hover {
+            background: rgba(227, 25, 55, 0.1);
+            border-color: #e31937;
+            color: #e31937;
+            transform: translateY(-1px);
+        }
+        
+        /* 设置控件样式 */
+        .setting-control {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+        
+        .setting-control:focus {
+            outline: none;
+            border-color: #e31937;
+        }
+    </style>
+</head>
+<body class="theme-frosted">
+    <!-- 顶部导航栏 -->
+    <nav class="navbar fixed top-0 left-0 right-0 z-50 glass flex items-center justify-between px-6 py-3 h-16">
+        <!-- Logo和标题 -->
+        <div class="flex items-center space-x-4">
+            <i class="fas fa-moon text-2xl text-blue-400"></i>
+            <h1 class="main-title text-2xl font-bold gradient-text">Sleep Cycle Calculator</h1>
+        </div>
+        
+        <!-- 语言选择器 -->
+        <div class="relative">
+            <select id="languageSelect" class="glass border-0 rounded-lg px-3 py-2 text-sm font-medium cursor-pointer">
+                <option value="en">🇺🇸 English</option>
+                <option value="zh">🇨🇳 中文</option>
+                <option value="es">🇪🇸 Español</option>
+                <option value="fr">🇫🇷 Français</option>
+                <option value="de">🇩🇪 Deutsch</option>
+                <option value="ja">🇯🇵 日本語</option>
+                <option value="pt">🇵🇹 Português</option>
+                <option value="ru">🇷🇺 Русский</option>
+                <option value="ar">🇸🇦 العربية</option>
+                <option value="hi">🇮🇳 हिन्दी</option>
+            </select>
+        </div>
+    </nav>
+    
+    <!-- 背景主题选择器 -->
+    <div class="bg-selector">
+        <div class="text-xs font-medium mb-2 col-span-2 text-center" data-translate="backgroundTheme">Background Theme</div>
+        <div class="bg-option active" data-theme="frosted" title="Frosted Glass White"></div>
+        <div class="bg-option" data-theme="green" title="Nature Green"></div>
+        <div class="bg-option" data-theme="pink" title="Sunset Pink"></div>
+        <div class="bg-option" data-theme="twilight" title="Twilight Reading"></div>
+    </div>
+    
+    <!-- 主要内容区域 -->
+    <main class="pt-16 h-screen overflow-hidden">
+        <!-- 顶部广告位 -->
+        <div class="ad-slot mx-auto my-2" style="width: 728px; height: 90px; max-width: 90vw;">
+            <!-- Google AdSense 广告位 -->
+            <!-- 横幅广告 - 728x90 (桌面) / 320x50 (移动) -->
+            <div class="text-center">
+                <i class="fas fa-ad text-lg mb-1"></i><br>
+                Google AdSense 广告位<br>
+                横幅广告 - 728x90 (桌面) / 320x50 (移动)
+            </div>
+        </div>
+        
+        <!-- 主要功能网格 -->
+        <div class="content-grid grid grid-cols-3 gap-4 px-4 h-full pb-20">
+            <!-- 睡觉时间计算器 -->
+            <section class="calculator-section">
+                <div class="glass rounded-2xl p-4 h-full">
+                    <div class="flex items-center mb-3">
+                        <i class="fas fa-bed text-xl text-red-500 mr-2"></i>
+                        <h2 class="text-lg font-bold" data-translate="bedtimeCalculator">Bedtime Calculator</h2>
+                    </div>
+                    <p class="text-sm mb-4 opacity-80" data-translate="bedtimeDesc">Enter your desired wake-up time, and we'll calculate the best bedtime for you</p>
+                    
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium mb-2" data-translate="wakeUpTime">Wake-up Time</label>
+                            <!-- 修复后的滚动时间选择器 -->
+                            <div class="time-picker" id="wakeUpTimePicker">
+                                <div class="picker-column" data-type="hour">
+                                    <div class="picker-item">5</div>
+                                    <div class="picker-item">6</div>
+                                    <div class="picker-item selected">7</div>
+                                    <div class="picker-item">8</div>
+                                    <div class="picker-item">9</div>
+                                    <div class="picker-item">10</div>
+                                    <div class="picker-item">11</div>
+                                    <div class="picker-item">12</div>
+                                    <div class="picker-item">1</div>
+                                    <div class="picker-item">2</div>
+                                    <div class="picker-item">3</div>
+                                    <div class="picker-item">4</div>
+                                </div>
+                                <div class="picker-column" data-type="minute">
+                                    <div class="picker-item">45</div>
+                                    <div class="picker-item">50</div>
+                                    <div class="picker-item">55</div>
+                                    <div class="picker-item selected">00</div>
+                                    <div class="picker-item">05</div>
+                                    <div class="picker-item">10</div>
+                                    <div class="picker-item">15</div>
+                                    <div class="picker-item">20</div>
+                                    <div class="picker-item">25</div>
+                                    <div class="picker-item">30</div>
+                                    <div class="picker-item">35</div>
+                                    <div class="picker-item">40</div>
+                                </div>
+                                <div class="picker-column" data-type="period">
+                                    <div class="picker-item">PM</div>
+                                    <div class="picker-item selected">AM</div>
+                                    <div class="picker-item">PM</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button onclick="calculateBedtime()" class="btn-primary w-full">
+                            <i class="fas fa-calculator mr-2"></i>
+                            <span data-translate="calculateBedtime">Calculate Bedtime</span>
+                        </button>
+                        
+                        <div id="bedtimeResults" class="space-y-2 max-h-40 overflow-y-auto">
+                            <!-- 结果将在这里显示 -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 睡眠科学图表 -->
+            <section class="chart-section">
+                <div class="chart-container">
+                    <h3 class="text-lg font-bold mb-2 text-center" data-translate="sleepScience">Sleep Science</h3>
+                    <canvas id="sleepChart" width="400" height="200"></canvas>
+                </div>
+                
+                <!-- 方形广告位 -->
+                <div class="ad-slot mt-4" style="height: 120px;">
+                    <!-- Google AdSense 广告位 -->
+                    <!-- 方形广告 - 300x250 -->
+                    <div class="text-center">
+                        <i class="fas fa-ad text-lg mb-1"></i><br>
+                        Google AdSense 广告位<br>
+                        方形广告 - 300x250
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 起床时间计算器 -->
+            <section class="calculator-section">
+                <div class="glass rounded-2xl p-4 h-full">
+                    <div class="flex items-center mb-3">
+                        <i class="fas fa-sun text-xl text-yellow-500 mr-2"></i>
+                        <h2 class="text-lg font-bold" data-translate="wakeUpCalculator">Wake-up Time Calculator</h2>
+                    </div>
+                    <p class="text-sm mb-4 opacity-80" data-translate="wakeUpDesc">If you're going to sleep now, we'll calculate the best wake-up times for you</p>
+                    
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium mb-2" data-translate="bedtime">Bedtime</label>
+                            <!-- 修复后的滚动时间选择器 -->
+                            <div class="time-picker" id="bedtimePicker">
+                                <div class="picker-column" data-type="hour">
+                                    <div class="picker-item">8</div>
+                                    <div class="picker-item">9</div>
+                                    <div class="picker-item">10</div>
+                                    <div class="picker-item selected">11</div>
+                                    <div class="picker-item">12</div>
+                                    <div class="picker-item">1</div>
+                                    <div class="picker-item">2</div>
+                                    <div class="picker-item">3</div>
+                                    <div class="picker-item">4</div>
+                                    <div class="picker-item">5</div>
+                                    <div class="picker-item">6</div>
+                                    <div class="picker-item">7</div>
+                                </div>
+                                <div class="picker-column" data-type="minute">
+                                    <div class="picker-item">45</div>
+                                    <div class="picker-item">50</div>
+                                    <div class="picker-item">55</div>
+                                    <div class="picker-item selected">00</div>
+                                    <div class="picker-item">05</div>
+                                    <div class="picker-item">10</div>
+                                    <div class="picker-item">15</div>
+                                    <div class="picker-item">20</div>
+                                    <div class="picker-item">25</div>
+                                    <div class="picker-item">30</div>
+                                    <div class="picker-item">35</div>
+                                    <div class="picker-item">40</div>
+                                </div>
+                                <div class="picker-column" data-type="period">
+                                    <div class="picker-item">AM</div>
+                                    <div class="picker-item selected">PM</div>
+                                    <div class="picker-item">AM</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button onclick="calculateWakeUpTime()" class="btn-primary w-full">
+                            <i class="fas fa-alarm-clock mr-2"></i>
+                            <span data-translate="calculateWakeUp">Calculate Wake-up Time</span>
+                        </button>
+                        
+                        <div id="wakeUpResults" class="space-y-2 max-h-40 overflow-y-auto">
+                            <!-- 结果将在这里显示 -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 快速操作区域 -->
+            <section class="quick-actions">
+                <div class="glass rounded-2xl p-4 h-full">
+                    <h3 class="text-lg font-bold mb-3">
+                        <i class="fas fa-bolt text-yellow-500 mr-2"></i>
+                        <span data-translate="quickActions">Quick Actions</span>
+                    </h3>
+                    
+                    <div class="space-y-2">
+                        <button onclick="sleepNow()" class="quick-btn w-full text-left">
+                            <i class="fas fa-moon mr-2"></i>
+                            <span data-translate="sleepNow">Sleep Now</span>
+                        </button>
+                        
+                        <button onclick="powerNap()" class="quick-btn w-full text-left">
+                            <i class="fas fa-clock mr-2"></i>
+                            <span data-translate="powerNap">20-min Power Nap</span>
+                        </button>
+                        
+                        <button onclick="resetAll()" class="quick-btn w-full text-left">
+                            <i class="fas fa-redo mr-2"></i>
+                            <span data-translate="reset">Reset All</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 个人设置 -->
+            <section class="settings">
+                <div class="glass rounded-2xl p-4 h-full">
+                    <h3 class="text-lg font-bold mb-3">
+                        <i class="fas fa-cog text-gray-500 mr-2"></i>
+                        <span data-translate="personalSettings">Personal Settings</span>
+                    </h3>
+                    
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium mb-1" data-translate="fallAsleepTime">Fall Asleep Time</label>
+                            <select id="fallAsleepTime" class="setting-control w-full">
+                                <option value="15">15 minutes</option>
+                                <option value="10">10 minutes</option>
+                                <option value="20">20 minutes</option>
+                                <option value="30">30 minutes</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-medium mb-1" data-translate="sleepCycleLength">Sleep Cycle Length</label>
+                            <select id="sleepCycleLength" class="setting-control w-full">
+                                <option value="90">90 minutes</option>
+                                <option value="85">85 minutes</option>
+                                <option value="95">95 minutes</option>
+                                <option value="100">100 minutes</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 侧边广告位 -->
+            <section class="ad-section">
+                <div class="ad-slot" style="height: 250px;">
+                    <!-- Google AdSense 广告位 -->
+                    <!-- 侧边广告 - 160x600 -->
+                    <div class="text-center">
+                        <i class="fas fa-ad text-lg mb-1"></i><br>
+                        Google AdSense 广告位<br>
+                        侧边广告 - 160x600
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+    
+    <!-- 底部信息栏 -->
+    <footer class="fixed bottom-0 left-0 right-0 glass px-6 py-2 flex items-center justify-between text-sm">
+        <div class="opacity-70" data-translate="copyright">© 2024 Sleep Cycle Calculator. Maintain healthy sleep habits.</div>
+        
+        <!-- 底部广告位 -->
+        <div class="ad-slot" style="width: 300px; height: 30px;">
+            <!-- Google AdSense 广告位 -->
+            <!-- 底部横幅广告 - 728x90 -->
+            <div class="text-center text-xs">
+                Google AdSense 广告位 - 底部横幅
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // 多语言支持
+        const translations = {
+            en: {
+                backgroundTheme: "Background Theme",
+                bedtimeCalculator: "Bedtime Calculator",
+                bedtimeDesc: "Enter your desired wake-up time, and we'll calculate the best bedtime for you",
+                wakeUpTime: "Wake-up Time",
+                calculateBedtime: "Calculate Bedtime",
+                wakeUpCalculator: "Wake-up Time Calculator",
+                wakeUpDesc: "If you're going to sleep now, we'll calculate the best wake-up times for you",
+                bedtime: "Bedtime",
+                calculateWakeUp: "Calculate Wake-up Time",
+                quickActions: "Quick Actions",
+                sleepNow: "Sleep Now",
+                powerNap: "20-min Power Nap",
+                reset: "Reset All",
+                personalSettings: "Personal Settings",
+                fallAsleepTime: "Fall Asleep Time",
+                sleepCycleLength: "Sleep Cycle Length",
+                sleepScience: "Sleep Science",
+                copyright: "© 2024 Sleep Cycle Calculator. Maintain healthy sleep habits.",
+                suggestedBedtimes: "Suggested bedtimes:",
+                suggestedWakeUpTimes: "Suggested wake-up times:",
+                sleepCycles: "sleep cycles",
+                hours: "hours",
+                minutes: "minutes"
+            },
+            zh: {
+                backgroundTheme: "背景主题",
+                bedtimeCalculator: "睡觉时间计算器",
+                bedtimeDesc: "输入您期望的起床时间，我们将为您计算最佳睡觉时间",
+                wakeUpTime: "起床时间",
+                calculateBedtime: "计算睡觉时间",
+                wakeUpCalculator: "起床时间计算器",
+                wakeUpDesc: "如果您现在要睡觉，我们将为您计算最佳起床时间",
+                bedtime: "睡觉时间",
+                calculateWakeUp: "计算起床时间",
+                quickActions: "快速操作",
+                sleepNow: "现在就睡",
+                powerNap: "20分钟小憩",
+                reset: "重置所有",
+                personalSettings: "个人设置",
+                fallAsleepTime: "入睡时间",
+                sleepCycleLength: "睡眠周期长度",
+                sleepScience: "睡眠科学",
+                copyright: "© 2024 睡眠周期计算器。保持健康的睡眠习惯。",
+                suggestedBedtimes: "建议睡觉时间：",
+                suggestedWakeUpTimes: "建议起床时间：",
+                sleepCycles: "个睡眠周期",
+                hours: "小时",
+                minutes: "分钟"
+            }
+        };
+        
+        let currentLang = 'en';
+        
+        // 修复后的时间选择器类
+        class TimePicker {
+            constructor(containerId) {
+                this.container = document.getElementById(containerId);
+                this.columns = this.container.querySelectorAll('.picker-column');
+                this.init();
+            }
+            
+            init() {
+                this.columns.forEach(column => {
+                    this.setupColumn(column);
+                });
+                // 初始化时确保选中项居中
+                setTimeout(() => {
+                    this.centerSelectedItems();
+                }, 100);
+            }
+            
+            setupColumn(column) {
+                const items = column.querySelectorAll('.picker-item');
+                
+                // 点击选择
+                items.forEach((item, index) => {
+                    item.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.selectItem(column, index);
+                    });
+                });
+                
+                // 滚动选择 - 优化滚动检测
+                let scrollTimeout;
+                column.addEventListener('scroll', () => {
+                    clearTimeout(scrollTimeout);
+                    scrollTimeout = setTimeout(() => {
+                        this.handleScroll(column);
+                    }, 100); // 减少延迟，提高响应性
+                });
+                
+                // 鼠标滚轮 - 改进滚轮处理
+                column.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    const delta = e.deltaY > 0 ? 1 : -1;
+                    this.scrollToNext(column, delta);
+                });
+                
+                // 触摸滑动支持
+                let startY = 0;
+                let startScrollTop = 0;
+                
+                column.addEventListener('touchstart', (e) => {
+                    startY = e.touches[0].clientY;
+                    startScrollTop = column.scrollTop;
+                });
+                
+                column.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                    const currentY = e.touches[0].clientY;
+                    const diff = startY - currentY;
+                    column.scrollTop = startScrollTop + diff;
+                });
+                
+                column.addEventListener('touchend', () => {
+                    setTimeout(() => {
+                        this.handleScroll(column);
+                    }, 100);
+                });
+            }
+            
+            selectItem(column, index) {
+                const items = column.querySelectorAll('.picker-item');
+                
+                // 移除所有选中状态
+                items.forEach(item => item.classList.remove('selected'));
+                
+                // 添加选中状态
+                if (items[index]) {
+                    items[index].classList.add('selected');
+                    
+                    // 滚动到选中项 - 修复居中逻辑
+                    const itemHeight = 40;
+                    const containerHeight = column.clientHeight;
+                    const paddingTop = 60; // 与CSS中的padding-top保持一致
+                    
+                    // 计算滚动位置，确保选中项在容器中央
+                    const scrollTop = index * itemHeight;
+                    
+                    column.scrollTo({
+                        top: scrollTop,
+                        behavior: 'smooth'
+                    });
+                    
+                    // 触发时间变化事件
+                    setTimeout(() => {
+                        this.onTimeChange();
+                    }, 50);
+                }
+            }
+            
+            handleScroll(column) {
+                const itemHeight = 40;
+                const paddingTop = 60;
+                const scrollTop = column.scrollTop;
+                
+                // 计算当前应该选中的项目索引
+                const selectedIndex = Math.round(scrollTop / itemHeight);
+                
+                const items = column.querySelectorAll('.picker-item');
+                if (selectedIndex >= 0 && selectedIndex < items.length) {
+                    // 移除所有选中状态
+                    items.forEach(item => item.classList.remove('selected'));
+                    
+                    // 添加选中状态
+                    items[selectedIndex].classList.add('selected');
+                    
+                    // 自动对齐到选中项
+                    const targetScrollTop = selectedIndex * itemHeight;
+                    if (Math.abs(scrollTop - targetScrollTop) > 5) {
+                        column.scrollTo({
+                            top: targetScrollTop,
+                            behavior: 'smooth'
+                        });
+                    }
+                    
+                    // 触发时间变化事件
+                    this.onTimeChange();
+                }
+            }
+            
+            scrollToNext(column, direction) {
+                const items = column.querySelectorAll('.picker-item');
+                const currentSelected = column.querySelector('.picker-item.selected');
+                const currentIndex = Array.from(items).indexOf(currentSelected);
+                const newIndex = Math.max(0, Math.min(items.length - 1, currentIndex + direction));
+                
+                if (newIndex !== currentIndex) {
+                    this.selectItem(column, newIndex);
+                }
+            }
+            
+            centerSelectedItems() {
+                this.columns.forEach(column => {
+                    const selectedItem = column.querySelector('.picker-item.selected');
+                    if (selectedItem) {
+                        const items = column.querySelectorAll('.picker-item');
+                        const index = Array.from(items).indexOf(selectedItem);
+                        this.selectItem(column, index);
+                    }
+                });
+            }
+            
+            getValue() {
+                const hourColumn = this.container.querySelector('[data-type="hour"]');
+                const minuteColumn = this.container.querySelector('[data-type="minute"]');
+                const periodColumn = this.container.querySelector('[data-type="period"]');
+                
+                const hour = hourColumn.querySelector('.selected')?.textContent || '12';
+                const minute = minuteColumn.querySelector('.selected')?.textContent || '00';
+                const period = periodColumn.querySelector('.selected')?.textContent || 'AM';
+                
+                return { hour, minute, period };
+            }
+            
+            setValue(hour, minute, period) {
+                // 设置小时
+                const hourColumn = this.container.querySelector('[data-type="hour"]');
+                const hourItems = hourColumn.querySelectorAll('.picker-item');
+                hourItems.forEach((item, index) => {
+                    if (item.textContent === hour.toString()) {
+                        this.selectItem(hourColumn, index);
+                    }
+                });
+                
+                // 设置分钟
+                const minuteColumn = this.container.querySelector('[data-type="minute"]');
+                const minuteItems = minuteColumn.querySelectorAll('.picker-item');
+                minuteItems.forEach((item, index) => {
+                    if (item.textContent === minute.toString().padStart(2, '0')) {
+                        this.selectItem(minuteColumn, index);
+                    }
+                });
+                
+                // 设置AM/PM
+                const periodColumn = this.container.querySelector('[data-type="period"]');
+                const periodItems = periodColumn.querySelectorAll('.picker-item');
+                periodItems.forEach((item, index) => {
+                    if (item.textContent === period) {
+                        this.selectItem(periodColumn, index);
+                    }
+                });
+            }
+            
+            onTimeChange() {
+                // 子类可以重写此方法
+            }
+        }
+        
+        // 起床时间选择器
+        class WakeUpTimePicker extends TimePicker {
+            onTimeChange() {
+                // 自动计算睡觉时间
+                setTimeout(() => {
+                    calculateBedtime();
+                }, 100);
+            }
+        }
+        
+        // 睡觉时间选择器
+        class BedtimePicker extends TimePicker {
+            onTimeChange() {
+                // 自动计算起床时间
+                setTimeout(() => {
+                    calculateWakeUpTime();
+                }, 100);
+            }
+        }
+        
+        // 初始化时间选择器
+        let wakeUpTimePicker, bedtimePicker;
+        
+        // 语言切换功能
+        function switchLanguage(lang) {
+            currentLang = lang;
+            const elements = document.querySelectorAll('[data-translate]');
+            elements.forEach(element => {
+                const key = element.getAttribute('data-translate');
+                if (translations[lang] && translations[lang][key]) {
+                    element.textContent = translations[lang][key];
+                }
+            });
+            
+            // 更新背景主题提示
+            updateBackgroundTooltips();
+        }
+        
+        // 更新背景主题提示
+        function updateBackgroundTooltips() {
+            const tooltips = {
+                en: {
+                    frosted: "Frosted Glass White",
+                    green: "Nature Green",
+                    pink: "Sunset Pink",
+                    twilight: "Twilight Reading"
+                },
+                zh: {
+                    frosted: "磨砂玻璃白",
+                    green: "自然绿韵",
+                    pink: "晚霞粉韵",
+                    twilight: "暮光阅读"
+                }
+            };
+            
+            document.querySelectorAll('.bg-option').forEach(option => {
+                const theme = option.getAttribute('data-theme');
+                if (tooltips[currentLang] && tooltips[currentLang][theme]) {
+                    option.setAttribute('title', tooltips[currentLang][theme]);
+                }
+            });
+        }
+        
+        // 背景主题切换
+        function switchTheme(theme) {
+            document.body.className = `theme-${theme}`;
+            
+            // 更新活动状态
+            document.querySelectorAll('.bg-option').forEach(option => {
+                option.classList.remove('active');
+            });
+            document.querySelector(`[data-theme="${theme}"]`).classList.add('active');
+            
+            // 保存用户偏好
+            localStorage.setItem('sleepCalculatorTheme', theme);
+        }
+        
+        // 将12小时制转换为24小时制
+        function convertTo24Hour(hour, period) {
+            let hour24 = parseInt(hour);
+            if (period === 'AM' && hour24 === 12) {
+                hour24 = 0;
+            } else if (period === 'PM' && hour24 !== 12) {
+                hour24 += 12;
+            }
+            return hour24;
+        }
+        
+        // 将24小时制转换为12小时制
+        function convertTo12Hour(hour24) {
+            const period = hour24 >= 12 ? 'PM' : 'AM';
+            let hour12 = hour24 % 12;
+            if (hour12 === 0) hour12 = 12;
+            return { hour: hour12, period };
+        }
+        
+        // 睡觉时间计算
+        function calculateBedtime() {
+            const timeValue = wakeUpTimePicker.getValue();
+            const fallAsleepMinutes = parseInt(document.getElementById('fallAsleepTime').value);
+            const cycleLength = parseInt(document.getElementById('sleepCycleLength').value);
+            
+            const hour24 = convertTo24Hour(timeValue.hour, timeValue.period);
+            const minute = parseInt(timeValue.minute);
+            
+            const wakeUpDate = new Date();
+            wakeUpDate.setHours(hour24, minute, 0, 0);
+            
+            const results = [];
+            for (let cycles = 3; cycles <= 6; cycles++) {
+                const totalSleepMinutes = cycles * cycleLength;
+                const bedtimeDate = new Date(wakeUpDate.getTime() - (totalSleepMinutes + fallAsleepMinutes) * 60000);
+                
+                // 如果计算出的睡觉时间是第二天，则减去一天
+                if (bedtimeDate > wakeUpDate) {
+                    bedtimeDate.setDate(bedtimeDate.getDate() - 1);
+                }
+                
+                const bedtimeStr = bedtimeDate.toTimeString().slice(0, 5);
+                const totalHours = Math.floor(totalSleepMinutes / 60);
+                const totalMins = totalSleepMinutes % 60;
+                
+                results.push({
+                    time: bedtimeStr,
+                    cycles: cycles,
+                    duration: `${totalHours}${translations[currentLang].hours}${totalMins > 0 ? totalMins + translations[currentLang].minutes : ''}`
+                });
+            }
+            
+            displayResults('bedtimeResults', results, 'bedtime');
+        }
+        
+        // 起床时间计算
+        function calculateWakeUpTime() {
+            const timeValue = bedtimePicker.getValue();
+            const fallAsleepMinutes = parseInt(document.getElementById('fallAsleepTime').value);
+            const cycleLength = parseInt(document.getElementById('sleepCycleLength').value);
+            
+            const hour24 = convertTo24Hour(timeValue.hour, timeValue.period);
+            const minute = parseInt(timeValue.minute);
+            
+            const bedtimeDate = new Date();
+            bedtimeDate.setHours(hour24, minute, 0, 0);
+            bedtimeDate.setTime(bedtimeDate.getTime() + fallAsleepMinutes * 60000);
+            
+            const results = [];
+            for (let cycles = 3; cycles <= 6; cycles++) {
+                const totalSleepMinutes = cycles * cycleLength;
+                const wakeUpDate = new Date(bedtimeDate.getTime() + totalSleepMinutes * 60000);
+                
+                // 如果起床时间是第二天，则加上一天
+                if (wakeUpDate < bedtimeDate) {
+                    wakeUpDate.setDate(wakeUpDate.getDate() + 1);
+                }
+                
+                const wakeUpStr = wakeUpDate.toTimeString().slice(0, 5);
+                const totalHours = Math.floor(totalSleepMinutes / 60);
+                const totalMins = totalSleepMinutes % 60;
+                
+                results.push({
+                    time: wakeUpStr,
+                    cycles: cycles,
+                    duration: `${totalHours}${translations[currentLang].hours}${totalMins > 0 ? totalMins + translations[currentLang].minutes : ''}`
+                });
+            }
+            
+            displayResults('wakeUpResults', results, 'wakeup');
+        }
+        
+        // 显示结果
+        function displayResults(containerId, results, type) {
+            const container = document.getElementById(containerId);
+            const title = type === 'bedtime' ? translations[currentLang].suggestedBedtimes : translations[currentLang].suggestedWakeUpTimes;
+            
+            container.innerHTML = `
+                <h4 class="font-semibold text-red-500 mb-2">${title}</h4>
+                ${results.map(result => `
+                    <div class="result-card">
+                        <div class="flex justify-between items-center">
+                            <div class="text-lg font-bold text-red-500">• ${result.time}</div>
+                            <div class="text-right text-sm opacity-75">
+                                <div>${result.cycles} ${translations[currentLang].sleepCycles}</div>
+                                <div>${result.duration}</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+        }
+        
+        // 快速操作
+        function sleepNow() {
+            const now = new Date();
+            const { hour, period } = convertTo12Hour(now.getHours());
+            const minute = Math.round(now.getMinutes() / 5) * 5; // 四舍五入到最近的5分钟
+            
+            bedtimePicker.setValue(hour, minute, period);
+        }
+        
+        function powerNap() {
+            const now = new Date();
+            const wakeUpTime = new Date(now.getTime() + 20 * 60000);
+            const wakeUpStr = wakeUpTime.toTimeString().slice(0, 5);
+            
+            const container = document.getElementById('wakeUpResults');
+            container.innerHTML = `
+                <h4 class="font-semibold text-red-500 mb-2">${translations[currentLang].powerNap}:</h4>
+                <div class="result-card">
+                    <div class="flex justify-between items-center">
+                        <div class="text-lg font-bold text-red-500">• ${wakeUpStr}</div>
+                        <div class="text-right text-sm opacity-75">
+                            <div>20 ${translations[currentLang].minutes}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function resetAll() {
+            // 重置时间选择器
+            wakeUpTimePicker.setValue(7, 0, 'AM');
+            bedtimePicker.setValue(11, 0, 'PM');
+            
+            // 清空结果
+            document.getElementById('bedtimeResults').innerHTML = '';
+            document.getElementById('wakeUpResults').innerHTML = '';
+        }
+        
+        // 初始化睡眠科学图表
+        function initSleepChart() {
+            const ctx = document.getElementById('sleepChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['0', '1.5h', '3h', '4.5h', '6h', '7.5h', '9h'],
+                    datasets: [{
+                        label: 'Sleep Depth',
+                        data: [0, -3, -1, -3, -1, -3, 0],
+                        borderColor: '#e31937',
+                        backgroundColor: 'rgba(227, 25, 55, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            display: false
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: 'var(--text-secondary)',
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 页面初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 恢复用户偏好
+            const savedTheme = localStorage.getItem('sleepCalculatorTheme') || 'frosted';
+            switchTheme(savedTheme);
+            
+            // 初始化时间选择器
+            wakeUpTimePicker = new WakeUpTimePicker('wakeUpTimePicker');
+            bedtimePicker = new BedtimePicker('bedtimePicker');
+            
+            // 初始化图表
+            initSleepChart();
+            
+            // 绑定事件监听器
+            document.getElementById('languageSelect').addEventListener('change', function(e) {
+                switchLanguage(e.target.value);
+            });
+            
+            document.querySelectorAll('.bg-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    switchTheme(this.getAttribute('data-theme'));
+                });
+            });
+            
+            // 初始化语言
+            switchLanguage('en');
+        });
+    </script>
+</body>
+</html>
+
